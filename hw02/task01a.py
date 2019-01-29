@@ -1,0 +1,97 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+
+def get_lagrange_polynomial_basis(points, substitution_point):
+    """
+    Function which calculates Lagrange basis polynomials value in a given point.
+    :param points: list of unique points in which interpolation will be performed.
+    :param substitution_point: point for substitute in the polynomials.
+    :return: substitution result list.
+    """
+
+    points = np.longdouble(points)
+    substitution_point = np.longdouble(substitution_point)
+    coefficients = np.longdouble([])
+
+    for first_ind, first_point in enumerate(points):
+        denominator = np.longdouble(1)
+        numerator = np.longdouble(1)
+        for second_ind, second_point in enumerate(points):
+            if second_ind == first_ind:
+                continue
+            denominator *= (first_point - second_point)
+            numerator *= (substitution_point - second_point)
+        coefficients = np.append(coefficients, numerator / denominator)
+
+    return coefficients
+
+
+def get_lagrange_polynomial_value(table, substitution_point):
+    """
+    Function which calculates Lagrange polynomial value in the given point.
+    :param table: list of pairs (point, value) to perform the interpolation. All the points must be different.
+    :param substitution_point: point to in the polynomial.
+    :return: substitution result.
+    """
+    coeffs = get_lagrange_polynomial_basis([point for point, _ in table], substitution_point)
+    result = np.longdouble(0)
+    for ind, (_, value) in enumerate(table):
+        result += np.longdouble(value) * coeffs[ind]
+    return result
+
+
+def generate_uniform_distribution(lower, upper, number_of_values):
+    """
+    Function which generates several uniform distributed values.
+    :param lower: the smallest value which could be generated.
+    :param upper: the greatest value value which could be generated.
+    :param number_of_values: number of values to generate
+    :return: np.array of generated values.
+    """
+    return np.longdouble(np.array(list(np.random.uniform(lower, upper, number_of_values))))
+
+
+def get_function_value(x):
+    """
+    Function which calculates the value of the x sin(2x) function.
+    :param x: point to substitute in the function.
+    :return: substitution result.
+    """
+    x = np.longdouble(x)
+    return x * (np.sin(x))
+
+
+def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
+    """
+    Builds absolute error plot (abs(Lagrange polynomial value - function value)).
+    :param x0: knot center.
+    :param N: polynomial degree.
+    :param plot_name: name of plot.
+    :param filename: filename to save plot.
+    :param points_number: number of points to build.
+    :return: nothing.
+    """
+    if plot_name is None:
+        plot_name = 'Lagrange polynomial error (x0 = {x0}, N = {N})'.format(x0=x0, N=N)
+    if filename is None:
+        filename = 'lagrange_polynomial_error_plot_{x0}_{N}'.format(x0=x0, N=N)
+    points = generate_uniform_distribution(x0 - 5, x0 + 5, N + 1)
+    table = [(point, get_function_value(point)) for point in points]
+
+    xs = np.arange(x0 - 5, x0 + 5, 10.0 / points_number)
+    ys = [np.abs(get_lagrange_polynomial_value(table, x) - get_function_value(x)) for x in xs]
+
+    plt.clf()
+    plt.plot(xs, ys)
+    plt.xlabel('x')
+    plt.ylabel('absolute error')
+    plt.title(plot_name)
+    plt.savefig(os.path.join('plots', filename))
+
+
+if __name__ == '__main__':
+    for x0 in [100]:
+        for N in [5, 10, 15]:
+            build_error_plot(x0, N)
