@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+eps = 1e-5
+
 
 def get_lagrange_polynomial_basis(points, substitution_point):
     """
@@ -35,6 +37,7 @@ def get_lagrange_polynomial_value(table, substitution_point):
     :param substitution_point: point to in the polynomial.
     :return: substitution result.
     """
+
     coeffs = get_lagrange_polynomial_basis([point for point, _ in table], substitution_point)
     result = np.longdouble(0)
     for ind, (_, value) in enumerate(table):
@@ -50,6 +53,7 @@ def generate_uniform_distribution(lower, upper, number_of_values):
     :param number_of_values: number of values to generate
     :return: np.array of generated values.
     """
+
     return np.longdouble(np.array(list(np.random.uniform(lower, upper, number_of_values))))
 
 
@@ -63,6 +67,37 @@ def get_function_value(x):
     return x * (np.sin(x))
 
 
+def get_max_absolute_error(table, lower, upper, number_of_points=100000):
+    """
+    Function which calculates the largest absolute error i.e. abs(Lagrange polynomial - function value)
+    :param table: list of pairs (point, value) to perform the interpolation. All the points must be different.
+    :param lower: the smallest value of the research segment.
+    :param upper: the greatest value of the research segment.
+    :param number_of_points: number of points to get values.
+    :return: the greatest absolute error of the research segment.
+    """
+
+    step = np.longdouble((upper - lower) / number_of_points)
+    points = np.arange(lower, upper + eps, step)
+    max_error = -1
+    for point in points:
+        max_error = max(max_error, np.abs(get_lagrange_polynomial_value(table, point) - get_function_value(point)))
+    return max_error
+
+
+def generate_values_table(x0, N, func=get_function_value):
+    """
+    Generates list of pairs (point, value) to perform the interpolation. All the points must be different.
+    :param func: base function.
+    :param x0: knot center.
+    :param N: polynomial degree.
+    :return: list of pairs (point, value).
+    """
+
+    points = generate_uniform_distribution(x0 - 5, x0 + 5 + eps, N + 1)
+    return [(point, func(point)) for point in points]
+
+
 def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
     """
     Builds absolute error plot (abs(Lagrange polynomial value - function value)).
@@ -73,14 +108,14 @@ def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
     :param points_number: number of points to build.
     :return: nothing.
     """
+
     if plot_name is None:
         plot_name = 'Lagrange polynomial error (x0 = {x0}, N = {N})'.format(x0=x0, N=N)
     if filename is None:
         filename = 'lagrange_polynomial_error_plot_{x0}_{N}'.format(x0=x0, N=N)
-    points = generate_uniform_distribution(x0 - 5, x0 + 5, N + 1)
+    points = generate_uniform_distribution(x0 - 5, x0 + 5 + eps, N + 1)
     table = [(point, get_function_value(point)) for point in points]
-
-    xs = np.arange(x0 - 5, x0 + 5, 10.0 / points_number)
+    xs = np.arange(x0 - 5, x0 + 5 + eps, 10.0 / points_number)
     ys = [np.abs(get_lagrange_polynomial_value(table, x) - get_function_value(x)) for x in xs]
 
     plt.clf()
@@ -89,6 +124,10 @@ def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
     plt.ylabel('absolute error')
     plt.title(plot_name)
     plt.savefig(os.path.join('plots', filename))
+
+    print('N = {N}, x0 = {x0}, max error = {error}'.format(N=N,
+                                                           x0=x0,
+                                                           error=get_max_absolute_error(table, x0 - 5, x0 + 5)))
 
 
 if __name__ == '__main__':
