@@ -85,7 +85,7 @@ def get_max_absolute_error(table, lower, upper, number_of_points=100000):
     return max_error
 
 
-def generate_values_table(x0, N, func=get_function_value):
+def generate_values_table(x0, N, func=get_function_value, points=None, delta=5):
     """
     Generates list of pairs (point, value) to perform the interpolation. All the points must be different.
     :param func: base function.
@@ -94,7 +94,8 @@ def generate_values_table(x0, N, func=get_function_value):
     :return: list of pairs (point, value).
     """
 
-    points = generate_uniform_distribution(x0 - 5, x0 + 5 + eps, N + 1)
+    if points is None:
+        points = generate_uniform_distribution(x0 - delta, x0 + delta + eps, N + 1)
     return [(point, func(point)) for point in points]
 
 
