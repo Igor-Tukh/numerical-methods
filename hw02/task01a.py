@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-eps = 1e-5
-
 
 def get_lagrange_polynomial_basis(points, substitution_point):
     """
@@ -57,6 +55,18 @@ def generate_uniform_distribution(lower, upper, number_of_values):
     return np.longdouble(np.array(list(np.random.uniform(lower, upper, number_of_values))))
 
 
+def generate_knots(lower, upper, number_of_values):
+    """
+    Function which generates several values with equal distance between neighbours.
+    :param lower: the smallest value which could be generated.
+    :param upper: the greatest value value which could be generated.
+    :param number_of_values: number of values to generate
+    :return: np.array of generated values.
+    """
+    return np.longdouble(np.array([lower + k * (1.0 * (upper - lower)) / (number_of_values - 1)
+                                   for k in range(number_of_values)]))
+
+
 def get_function_value(x):
     """
     Function which calculates the value of the x sin(2x) function.
@@ -64,10 +74,10 @@ def get_function_value(x):
     :return: substitution result.
     """
     x = np.longdouble(x)
-    return x * (np.sin(x))
+    return x * (np.sin(2 * x))
 
 
-def get_max_absolute_error(table, lower, upper, number_of_points=100000):
+def get_max_absolute_error(table, lower, upper, number_of_points=100000, func=get_function_value):
     """
     Function which calculates the largest absolute error i.e. abs(Lagrange polynomial - function value)
     :param table: list of pairs (point, value) to perform the interpolation. All the points must be different.
@@ -77,11 +87,10 @@ def get_max_absolute_error(table, lower, upper, number_of_points=100000):
     :return: the greatest absolute error of the research segment.
     """
 
-    step = np.longdouble((upper - lower) / number_of_points)
-    points = np.arange(lower, upper + eps, step)
+    points = generate_knots(lower, upper, number_of_points)
     max_error = -1
     for point in points:
-        max_error = max(max_error, np.abs(get_lagrange_polynomial_value(table, point) - get_function_value(point)))
+        max_error = max(max_error, np.abs(get_lagrange_polynomial_value(table, point) - func(point)))
     return max_error
 
 
@@ -95,7 +104,7 @@ def generate_values_table(x0, N, func=get_function_value, points=None, delta=5):
     """
 
     if points is None:
-        points = generate_uniform_distribution(x0 - delta, x0 + delta + eps, N + 1)
+        points = generate_knots(x0 - delta, x0 + delta, N + 1)
     return [(point, func(point)) for point in points]
 
 
@@ -114,9 +123,9 @@ def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
         plot_name = 'Lagrange polynomial error (x0 = {x0}, N = {N})'.format(x0=x0, N=N)
     if filename is None:
         filename = 'lagrange_polynomial_error_plot_{x0}_{N}'.format(x0=x0, N=N)
-    points = generate_uniform_distribution(x0 - 5, x0 + 5 + eps, N + 1)
+    points = generate_knots(x0 - 5, x0 + 5, N + 1)
     table = [(point, get_function_value(point)) for point in points]
-    xs = np.arange(x0 - 5, x0 + 5 + eps, 10.0 / points_number)
+    xs = generate_knots(x0 - 5, x0 + 5, points_number)
     ys = [np.abs(get_lagrange_polynomial_value(table, x) - get_function_value(x)) for x in xs]
 
     plt.clf()
@@ -131,7 +140,23 @@ def build_error_plot(x0, N, plot_name=None, filename=None, points_number=1000):
                                                            error=get_max_absolute_error(table, x0 - 5, x0 + 5)))
 
 
+def build_all_errors_plot(x0, ns, filename='task01a', points_number=1000):
+    plot_name = 'Lagrange polynomial error (x0 = {x0}, N = 5, 10, 15)'.format(x0=x0)
+    xs = generate_knots(x0 - 5, x0 + 5, points_number)
+    plt.clf()
+    for N in ns:
+        points = generate_knots(x0 - 5, x0 + 5, N + 1)
+        table = [(point, get_function_value(point)) for point in points]
+        ys = [np.abs(get_lagrange_polynomial_value(table, x) - get_function_value(x)) for x in xs]
+        plt.plot(xs, ys)
+    plt.xlabel('x')
+    plt.ylabel('absolute error')
+    plt.title(plot_name)
+    plt.savefig(os.path.join('plots', filename))
+
+
 if __name__ == '__main__':
     for x0 in [100]:
         for N in [5, 10, 15]:
             build_error_plot(x0, N)
+        build_all_errors_plot(x0, [5, 10, 15])
